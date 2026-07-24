@@ -866,75 +866,92 @@ window.App = {
                 this._renderTables();
             });
         };
+
         const bindSearch = (id, key, isArch) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('input', () => {
-                if (isArch) this._archFilters[key] = el.value.toLowerCase();
-                else this._activeFilters[key] = el.value.toLowerCase();
+                if (isArch) this._archFilters[key] = el.value;
+                else this._activeFilters[key] = el.value;
                 this._renderTables();
             });
         };
-        bind('filter-priority-active', 'priority', false); bind('filter-type-active', 'type', false);
-        bind('filter-status-active', 'status', false); bind('filter-sector-active', 'sector', false);
+
+        // Filtros da aba de Projetos Ativos
+        bind('filter-priority-active', 'priority', false);
+        bind('filter-type-active', 'type', false);
+        bind('filter-status-active', 'status', false);
+        bind('filter-sector-active', 'sector', false);
         bindSearch('input-search-active', 'search', false);
-        bind('filter-priority-archived', 'priority', true); bind('filter-sector-archived', 'sector', true);
+
+        // Filtros da aba de Arquivados
+        bind('filter-priority-archived', 'priority', true);
+        bind('filter-sector-archived', 'sector', true);
         bindSearch('input-search-archived', 'search', true);
     },
 
     _bindTabs() {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.getAttribute('data-tab');
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.toggle('active', b === btn);
-                    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
                 });
-                document.querySelectorAll('.tab-content').forEach(sec => {
-                    sec.classList.toggle('active', sec.id === `tab-${tab}`);
-                });
-                this._currentTab = tab;
+
+                const contentEl = document.getElementById(`tab-${target}`);
+                if (contentEl) contentEl.classList.add('active');
+
+                this._currentTab = target;
                 this._renderCharts();
-                lucide.createIcons();
             });
         });
     },
 
     _bindCollapsibles() {
-        document.addEventListener('click', e => {
-            const btn = e.target.closest('.collapsible-header');
-            if (!btn) return;
-            const target = btn.getAttribute('data-target');
-            const body = document.getElementById(target);
-            if (!body) return;
-            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
-            btn.setAttribute('aria-expanded', String(!isExpanded));
-            lucide.createIcons();
+        const headers = document.querySelectorAll('.collapsible-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                header.setAttribute('aria-expanded', !isExpanded);
+            });
         });
     },
 
     _bindResetWeek() {
-        ['btn-reset-week-active', 'btn-reset-week-archived'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('click', () => this.resetWeek());
-        });
+        const btn = document.getElementById('btn-reset-week-active');
+        if (btn) {
+            btn.addEventListener('click', () => this.resetWeek());
+        }
     },
 
     _toast(msg) {
-        document.querySelectorAll('.gp-toast').forEach(t => t.remove());
-        const toast = document.createElement('div');
-        toast.className = 'gp-toast';
+        let toast = document.getElementById('app-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px;
+                background: #1e293b; color: #fff; padding: 12px 20px;
+                border-radius: 8px; font-size: 0.875rem; font-weight: 500;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 2000;
+                transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
+            `;
+            document.body.appendChild(toast);
+        }
         toast.textContent = msg;
-        Object.assign(toast.style, {
-            position: 'fixed', bottom: '24px', right: '24px', background: '#1e293b', color: '#fff',
-            padding: '12px 20px', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,.15)',
-            zIndex: '9999', fontSize: '.875rem', fontWeight: '500', fontFamily: "'Inter', sans-serif",
-            opacity: '0', transform: 'translateY(10px)', transition: 'all .25s ease', maxWidth: '360px'
-        });
-        document.body.appendChild(toast);
-        requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
-        setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(10px)'; setTimeout(() => toast.remove(), 260); }, 3500);
+        toast.style.opacity = '1';
+        setTimeout(() => { toast.style.opacity = '0'; }, 3000);
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => { App.init(); });
+// ===== INICIALIZAÇÃO DA APLICAÇÃO =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Analytics Vercel (opcional, pode manter ou remover caso não utilize)
+    try { inject(); injectSpeedInsights(); } catch (e) {}
+
+    window.App.init();
+});
