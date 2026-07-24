@@ -1,4 +1,5 @@
 import { db } from './db.js';
+import { inject } from '@vercel/analytics';
 
 /* ==========================================================================
    1. ESTADO CENTRAL — fonte única de verdade
@@ -937,4 +938,7 @@ window.App = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => { App.init(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    App.init(); 
+    inject();
+});
