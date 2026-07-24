@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Projetos - Painel de Controle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" crossorigin src="/assets/index-DCdJmNcq.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BWQZg62r.css">
+</head>
+<body>
+<div class="app-container">
+
+    <!-- ===== HEADER ===== -->
+    <header class="app-header">
+        <div class="header-info">
+            <h1>Gerenciamento de Projetos</h1>
+            <p>Acompanhe interações e performance dos projetos</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-export-print" onclick="App.exportPrint()" title="Exportar / Imprimir Relatório">
+                <i data-lucide="printer"></i> Exportar / Imprimir
+            </button>
+            <nav class="app-tabs" aria-label="Navegação do Painel">
+                <button class="tab-btn active" data-tab="dashboard" role="tab">
+                    <i data-lucide="layout-dashboard" class="tab-icon"></i> Dashboard
+                </button>
+                <button class="tab-btn" data-tab="graficos" role="tab">
+                    <i data-lucide="bar-chart-3" class="tab-icon"></i> Gráficos
+                </button>
+                <button class="tab-btn" data-tab="projetos" role="tab">
+                    <i data-lucide="folder-kanban" class="tab-icon"></i> Projetos (Ativo)
+                </button>
+                <button class="tab-btn" data-tab="arquivados" role="tab">
+                    <i data-lucide="archive" class="tab-icon"></i> Arquivados
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===== KPI CARDS (SEMPRE VISÍVEIS) ===== -->
+    <section class="kpi-section" aria-label="Indicadores de Desempenho">
+        <div class="kpi-card kpi-ativos">
+            <div class="kpi-icon-wrapper"><i data-lucide="folder" class="kpi-icon"></i></div>
+            <div class="kpi-data">
+                <span class="kpi-value" id="kpi-active-projects">0</span>
+                <span class="kpi-label">PROJETOS ATIVOS</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-arquivados">
+            <div class="kpi-icon-wrapper"><i data-lucide="archive" class="kpi-icon"></i></div>
+            <div class="kpi-data">
+                <span class="kpi-value" id="kpi-archived-projects">0</span>
+                <span class="kpi-label">PROJETOS ARQUIVADOS</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-interacoes">
+            <div class="kpi-icon-wrapper"><i data-lucide="message-square" class="kpi-icon"></i></div>
+            <div class="kpi-data">
+                <span class="kpi-value" id="kpi-interactions">0</span>
+                <span class="kpi-label">INTERAÇÕES</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-respostas">
+            <div class="kpi-icon-wrapper"><i data-lucide="check-circle" class="kpi-icon"></i></div>
+            <div class="kpi-data">
+                <span class="kpi-value" id="kpi-replies">0</span>
+                <span class="kpi-label">RESPOSTAS</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-taxa">
+            <div class="kpi-icon-wrapper"><i data-lucide="trending-up" class="kpi-icon"></i></div>
+            <div class="kpi-data">
+                <span class="kpi-value" id="kpi-rate">0%</span>
+                <span class="kpi-label">TAXA DE INTERAÇÃO</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="app-main">
+
+        <!-- ========== TAB: DASHBOARD ========== -->
+        <section id="tab-dashboard" class="tab-content active">
+
+            <!-- Alertas Dinâmicos -->
+            <div class="alerts-container" id="dashboard-alerts">
+                <div class="alert-card alert-danger">
+                    <div class="alert-icon-wrapper"><i data-lucide="alert-triangle" class="alert-icon"></i></div>
+                    <div class="alert-content">
+                        <h3>Projetos com Prazo Vencido</h3>
+                        <p><strong class="highlight-num" id="alert-overdue-count">0</strong> projetos precisam de atenção imediata</p>
+                        <div id="alert-overdue-list" class="alert-list"></div>
+                    </div>
+                </div>
+                <div class="alert-card alert-warning">
+                    <div class="alert-icon-wrapper"><i data-lucide="clock" class="alert-icon"></i></div>
+                    <div class="alert-content">
+                        <h3>Sem Interação há 7 dias</h3>
+                        <p><strong class="highlight-num" id="alert-noint-count">0</strong> projeto(s) sem acompanhamento</p>
+                        <div id="alert-noint-list" class="alert-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grade de gráficos 2x2 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h2>Distribuição por Status</h2>
+                    <div class="chart-wrapper donut-wrapper">
+                        <canvas id="chart-status-distribution"></canvas>
+                    </div>
+                    <div class="chart-legend-custom" id="legend-status"></div>
+                </div>
+                <div class="chart-card">
+                    <h2>Performance: Interno vs Externo</h2>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-performance-io"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h2>Comparativo de Interações</h2>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-interactions-comparison"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h2>Média de Conclusão por Setor</h2>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-avg-completion"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Volume Diário de Interações -->
+            <div class="chart-card" style="margin-top:24px;">
+                <h2>Volume de Interações Diárias</h2>
+                <div class="chart-wrapper" style="height:200px;">
+                    <canvas id="chart-daily-volume"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabela de Impedimentos Críticos -->
+            <div class="chart-card" style="margin-top:24px; padding:0; overflow:hidden;">
+                <div style="padding:20px 24px 0;"><h2 style="color:var(--color-danger);">⚠ Impedimentos Críticos</h2></div>
+                <table class="project-table" style="margin-top:12px;">
+                    <tbody id="dashboard-impediments-body"></tbody>
+                </table>
+            </div>
+
+            <div class="table-tip-banner" style="margin-top:24px; border-radius:var(--radius-lg); border:1px solid var(--color-border);">
+                <span class="tip-icon">💡</span>
+                <span class="tip-text">Dica: Clique no <strong class="letter-badge">R</strong> para confirmar a resposta do cliente</span>
+            </div>
+        </section>
+
+        <!-- ========== TAB: GRÁFICOS ========== -->
+        <section id="tab-graficos" class="tab-content">
+            <div class="graphs-detailed-container">
+                <div class="chart-card full-width-card">
+                    <h2>% CONCLUÍDA</h2>
+                    <div class="chart-wrapper main-progress-chart">
+                        <canvas id="chart-percent-completed"></canvas>
+                    </div>
+                </div>
+                <div class="sub-charts-grid">
+                    <div class="chart-card">
+                        <h2>STMGO % CONCLUÍDA</h2>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-stmgo-progress"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h2>PROJETOS RÁPIDOS</h2>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-lightning-semaphore"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== TAB: PROJETOS ATIVOS ========== -->
+        <section id="tab-projetos" class="tab-content">
+
+            <!-- Alertas duplicados para contexto -->
+            <div class="alerts-container" id="projects-alerts">
+                <div class="alert-card alert-danger">
+                    <div class="alert-icon-wrapper"><i data-lucide="alert-triangle" class="alert-icon"></i></div>
+                    <div class="alert-content">
+                        <h3>Projetos com Prazo Vencido</h3>
+                        <p><strong class="highlight-num" id="alert-overdue-count2">0</strong> projetos precisam de atenção imediata</p>
+                    </div>
+                </div>
+                <div class="alert-card alert-warning">
+                    <div class="alert-icon-wrapper"><i data-lucide="clock" class="alert-icon"></i></div>
+                    <div class="alert-content">
+                        <h3>Sem Interação há 7 dias</h3>
+                        <p><strong class="highlight-num" id="alert-noint-count2">0</strong> projeto(s) sem acompanhamento</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar: Filtros + Ações -->
+            <div class="toolbar-container">
+                <div class="filters-row">
+                    <div class="filter-item">
+                        <label for="filter-priority-active"><i data-lucide="filter" style="width:13px;height:13px;"></i> Prioridade:</label>
+                        <select id="filter-priority-active">
+                            <option value="">Todas</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Média">Média</option>
+                            <option value="Baixa">Baixa</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="filter-type-active">Tipo:</label>
+                        <select id="filter-type-active">
+                            <option value="">Todos</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Rápido">Rápido</option>
+                            <option value="Super Rápido">Super Rápido</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="filter-status-active">Status:</label>
+                        <select id="filter-status-active">
+                            <option value="">Todos</option>
+                            <option value="Em Andamento">Em Andamento</option>
+                            <option value="Parado">Parado</option>
+                            <option value="Concluído">Concluído</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="filter-sector-active">Setor:</label>
+                        <select id="filter-sector-active">
+                            <option value="">Todos</option>
+                            <option value="Interno">Interno</option>
+                            <option value="Externo">Externo</option>
+                        </select>
+                    </div>
+                    <span id="active-filters-tag" class="badge badge-gray" style="display:none; margin-left:auto;">Filtros ativos</span>
+                </div>
+                <div class="actions-row">
+                    <div class="quick-add-group">
+                        <input type="text" id="input-quick-add-active" placeholder="Nome do novo projeto (criação rápida)...">
+                        <button class="btn-toolbar-action btn-blue" id="btn-quick-add-active">
+                            <i data-lucide="plus" class="btn-icon"></i> Rápido
+                        </button>
+                    </div>
+                    <button class="btn-toolbar-action btn-green" id="btn-open-modal-active">
+                        <i data-lucide="file-plus" class="btn-icon"></i> Novo Projeto
+                    </button>
+                    <div class="search-input-group">
+                        <i data-lucide="search" class="search-field-icon"></i>
+                        <input type="text" id="input-search-active" placeholder="Pesquisar projeto ou responsável...">
+                    </div>
+                    <button class="btn-toolbar-action btn-navy" id="btn-reset-week-active">Resetar Semana</button>
+                </div>
+            </div>
+
+            <!-- Tabela Internos -->
+            <div class="collapsible-section-wrapper" id="section-internos-active">
+                <button class="collapsible-header" aria-expanded="true" data-target="table-internos-active">
+                    <i data-lucide="chevron-down" class="collapsible-arrow"></i>
+                    <span>Projetos Internos</span>
+                    <span class="collapsible-count" id="count-internos-active">0</span>
+                </button>
+                <div class="collapsible-body" id="table-internos-active">
+                    <table class="project-table table-full-grid">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">PROJETO</th>
+                                <th rowspan="2">RESPONSÁVEL</th>
+                                <th rowspan="2">DATAS</th>
+                                <th rowspan="2">PROGRESSO</th>
+                                <th rowspan="2">STATUS</th>
+                                <th rowspan="2">IMPEDIMENTOS</th>
+                                <th colspan="5" class="th-centered-group">SEMANA ATUAL</th>
+                                <th rowspan="2">SEM. ANT.</th>
+                                <th rowspan="2">AÇÕES</th>
+                            </tr>
+                            <tr class="sub-headers">
+                                <th>SEG</th><th>TER</th><th>QUA</th><th>QUI</th><th>SEX</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-internos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabela Externos -->
+            <div class="collapsible-section-wrapper" id="section-externos-active">
+                <button class="collapsible-header" aria-expanded="true" data-target="table-externos-active">
+                    <i data-lucide="chevron-down" class="collapsible-arrow"></i>
+                    <span>Projetos Externos</span>
+                    <span class="collapsible-count count-purple" id="count-externos-active">0</span>
+                </button>
+                <div class="collapsible-body" id="table-externos-active">
+                    <table class="project-table table-full-grid">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">PROJETO</th>
+                                <th rowspan="2">RESPONSÁVEL</th>
+                                <th rowspan="2">DATAS</th>
+                                <th rowspan="2">PROGRESSO</th>
+                                <th rowspan="2">STATUS</th>
+                                <th rowspan="2">IMPEDIMENTOS</th>
+                                <th colspan="5" class="th-centered-group">SEMANA ATUAL</th>
+                                <th rowspan="2">SEM. ANT.</th>
+                                <th rowspan="2">AÇÕES</th>
+                            </tr>
+                            <tr class="sub-headers">
+                                <th>SEG</th><th>TER</th><th>QUA</th><th>QUI</th><th>SEX</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-externos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-tip-banner" style="margin-top:24px; border-radius:var(--radius-lg); border:1px solid var(--color-border);">
+                <span class="tip-icon">💡</span>
+                <span class="tip-text">Dica: Clique no <strong class="letter-badge">R</strong> para confirmar a resposta do cliente. Edite campos inline clicando neles diretamente.</span>
+            </div>
+        </section>
+
+        <!-- ========== TAB: ARQUIVADOS ========== -->
+        <section id="tab-arquivados" class="tab-content">
+            <div class="toolbar-container">
+                <div class="filters-row">
+                    <div class="filter-item">
+                        <label for="filter-priority-archived"><i data-lucide="filter" style="width:13px;height:13px;"></i> Prioridade:</label>
+                        <select id="filter-priority-archived">
+                            <option value="">Todas</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Média">Média</option>
+                            <option value="Baixa">Baixa</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="filter-sector-archived">Setor:</label>
+                        <select id="filter-sector-archived">
+                            <option value="">Todos</option>
+                            <option value="Interno">Interno</option>
+                            <option value="Externo">Externo</option>
+                        </select>
+                    </div>
+                    <div class="search-input-group">
+                        <i data-lucide="search" class="search-field-icon"></i>
+                        <input type="text" id="input-search-archived" placeholder="Pesquisar...">
+                    </div>
+                    <button class="btn-toolbar-action btn-green" id="btn-open-modal-archived">
+                        <i data-lucide="file-plus" class="btn-icon"></i> Novo Projeto
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapsible-section-wrapper">
+                <button class="collapsible-header" aria-expanded="true" data-target="table-internos-archived">
+                    <i data-lucide="chevron-down" class="collapsible-arrow"></i>
+                    <span>Projetos Internos</span>
+                    <span class="collapsible-count" id="count-internos-archived">0</span>
+                </button>
+                <div class="collapsible-body" id="table-internos-archived">
+                    <table class="project-table table-full-grid">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">PROJETO</th>
+                                <th rowspan="2">RESPONSÁVEL</th>
+                                <th rowspan="2">DATAS</th>
+                                <th rowspan="2">PROGRESSO</th>
+                                <th rowspan="2">STATUS</th>
+                                <th rowspan="2">IMPEDIMENTOS</th>
+                                <th colspan="5" class="th-centered-group">SEMANA ATUAL</th>
+                                <th rowspan="2">SEM. ANT.</th>
+                                <th rowspan="2">AÇÕES</th>
+                            </tr>
+                            <tr class="sub-headers">
+                                <th>SEG</th><th>TER</th><th>QUA</th><th>QUI</th><th>SEX</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archived-internos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="collapsible-section-wrapper">
+                <button class="collapsible-header" aria-expanded="true" data-target="table-externos-archived">
+                    <i data-lucide="chevron-down" class="collapsible-arrow"></i>
+                    <span>Projetos Externos</span>
+                    <span class="collapsible-count count-purple" id="count-externos-archived">0</span>
+                </button>
+                <div class="collapsible-body" id="table-externos-archived">
+                    <table class="project-table table-full-grid">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">PROJETO</th>
+                                <th rowspan="2">RESPONSÁVEL</th>
+                                <th rowspan="2">DATAS</th>
+                                <th rowspan="2">PROGRESSO</th>
+                                <th rowspan="2">STATUS</th>
+                                <th rowspan="2">IMPEDIMENTOS</th>
+                                <th colspan="5" class="th-centered-group">SEMANA ATUAL</th>
+                                <th rowspan="2">SEM. ANT.</th>
+                                <th rowspan="2">AÇÕES</th>
+                            </tr>
+                            <tr class="sub-headers">
+                                <th>SEG</th><th>TER</th><th>QUA</th><th>QUI</th><th>SEX</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archived-externos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main><!-- /.app-main -->
+
+    <!-- ===== DRAWER LATERAL ===== -->
+    <div class="drawer-overlay" id="project-drawer-overlay"></div>
+    <aside class="project-drawer" id="project-drawer" aria-hidden="true" role="dialog" aria-modal="true">
+        <header class="drawer-header">
+            <div class="drawer-header-left">
+                <h2 id="drawer-project-title">Projeto</h2>
+                <div class="drawer-status-badges" id="drawer-status-badges"></div>
+            </div>
+            <button class="btn-close-drawer" id="btn-close-drawer" aria-label="Fechar">
+                <i data-lucide="x"></i>
+            </button>
+        </header>
+        <div class="drawer-body">
+            <!-- Cronograma -->
+            <section class="drawer-section">
+                <h3>CRONOGRAMA</h3>
+                <div class="cronograma-row">
+                    <div class="input-date-wrapper">
+                        <label for="drawer-start-date">Início</label>
+                        <input type="text" id="drawer-start-date" placeholder="DD/MM">
+                    </div>
+                    <div class="input-date-wrapper">
+                        <label for="drawer-end-date">Término</label>
+                        <input type="text" id="drawer-end-date" placeholder="DD/MM">
+                    </div>
+                </div>
+            </section>
+            <!-- Progresso SVG -->
+            <section class="drawer-section">
+                <h3>PROGRESSO DO PROJETO</h3>
+                <div class="progress-donut-container">
+                    <div class="progress-donut-svg-wrapper">
+                        <svg class="progress-ring" width="140" height="140">
+                            <circle class="progress-ring-bg" stroke="#f1f5f9" stroke-width="10" fill="transparent" r="55" cx="70" cy="70"/>
+                            <circle class="progress-ring-circle" id="drawer-donut-ring" stroke="#1e5adb" stroke-width="10" fill="transparent" r="55" cx="70" cy="70" stroke-linecap="round"/>
+                        </svg>
+                        <div class="donut-text-overlay">
+                            <span class="donut-percent" id="drawer-completion-percent">0%</span>
+                            <span class="donut-sub">Conclusão</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:16px;">
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);">Ajustar % Concluída</label>
+                    <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+                        <input type="range" id="drawer-progress-slider" min="0" max="100" step="1" value="0" style="flex:1;accent-color:var(--color-primary);">
+                        <span id="drawer-progress-value" style="font-weight:700;min-width:38px;text-align:right;">0%</span>
+                    </div>
+                </div>
+            </section>
+            <!-- Interações -->
+            <section class="drawer-section">
+                <h3>RESUMO DE INTERAÇÕES</h3>
+                <div class="interaction-cards-row">
+                    <div class="interaction-mini-card current-week">
+                        <span class="mini-label">Semana Atual</span>
+                        <span class="mini-value" id="drawer-current-week-value">0/5</span>
+                    </div>
+                    <div class="interaction-mini-card previous-week">
+                        <span class="mini-label">Semana Anterior</span>
+                        <span class="mini-value" id="drawer-previous-week-value">0/5</span>
+                    </div>
+                </div>
+                <p class="weekday-list-title">Dias com Interação (Semana Atual):</p>
+                <ul class="weekday-list" id="drawer-weekday-list"></ul>
+            </section>
+            <!-- Responsável -->
+            <section class="drawer-section">
+                <h3>RESPONSÁVEL</h3>
+                <div class="responsible-row">
+                    <div class="responsible-avatar" id="drawer-responsible-avatar">--</div>
+                    <div class="responsible-fields">
+                        <div class="input-group">
+                            <input type="text" id="drawer-responsible-name" placeholder="Nome do responsável" aria-label="Nome do responsável">
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="drawer-responsible-role" placeholder="Cargo" aria-label="Cargo">
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Etapa / Status -->
+            <section class="drawer-section">
+                <h3>STATUS / ETAPA ATUAL</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="input-group">
+                        <label style="font-size:.75rem;font-weight:600;color:var(--color-text-muted);margin-bottom:6px;display:block;">Status</label>
+                        <select id="drawer-status" style="width:100%;font-family:var(--font-main);font-size:.875rem;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);outline:none;">
+                            <option value="Em Andamento">Em Andamento</option>
+                            <option value="Parado">Parado</option>
+                            <option value="Concluído">Concluído</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label style="font-size:.75rem;font-weight:600;color:var(--color-text-muted);margin-bottom:6px;display:block;">Etapa Atual</label>
+                        <input type="text" id="drawer-current-stage" placeholder="Ex: Desenvolvimento" aria-label="Etapa atual">
+                    </div>
+                </div>
+            </section>
+            <!-- Impedimentos -->
+            <section class="drawer-section">
+                <h3>IMPEDIMENTOS</h3>
+                <div class="input-group">
+                    <textarea id="drawer-impediments" rows="3" placeholder="Descreva os bloqueios ou impedimentos do projeto" aria-label="Impedimentos"></textarea>
+                </div>
+            </section>
+            <!-- SharePoint -->
+            <section class="drawer-section">
+                <h3>LINK SHAREPOINT</h3>
+                <div class="input-group">
+                    <input type="url" id="drawer-sharepoint-link" placeholder="https://..." aria-label="Link do SharePoint">
+                </div>
+            </section>
+        </div>
+        <footer class="drawer-footer">
+            <button class="btn-action btn-pdf" id="btn-export-pdf">
+                <i data-lucide="download"></i> Exportar como PDF
+            </button>
+            <button class="btn-action btn-sharepoint" id="btn-sharepoint">
+                <i data-lucide="external-link"></i> Arquivo no SharePoint
+            </button>
+        </footer>
+    </aside>
+
+    <!-- ===== MODAL: NOVO PROJETO ===== -->
+    <div class="modal-overlay" id="new-project-modal-overlay"></div>
+    <div class="modal-box" id="new-project-modal" aria-hidden="true" role="dialog">
+        <header class="modal-header">
+            <h2>Novo Projeto</h2>
+            <button class="btn-close-modal" id="btn-close-modal" aria-label="Fechar"><i data-lucide="x"></i></button>
+        </header>
+        <form id="form-new-project" class="modal-form" novalidate>
+
+            <div class="form-row">
+                <div class="form-field full-width">
+                    <label for="form-project-name">Nome do Projeto <span class="required">*</span></label>
+                    <input type="text" id="form-project-name" placeholder="Ex: Sistema de Monitoramento" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field full-width">
+                    <label>Setor <span class="required">*</span></label>
+                    <div class="toggle-button-group">
+                        <button type="button" class="btn-toggle active" data-sector="Interno">Interno</button>
+                        <button type="button" class="btn-toggle" data-sector="Externo">Externo</button>
+                    </div>
+                    <input type="hidden" id="form-project-sector" value="Interno">
+                </div>
+            </div>
+
+            <div class="form-row col-2">
+                <div class="form-field">
+                    <label for="form-start-date">Data de Início <span class="required">*</span></label>
+                    <input type="text" id="form-start-date" placeholder="DD/MM" required>
+                </div>
+                <div class="form-field">
+                    <label for="form-end-date">Data de Término <span class="required">*</span></label>
+                    <input type="text" id="form-end-date" placeholder="DD/MM/AAAA" required>
+                </div>
+            </div>
+
+            <div class="form-row col-2">
+                <div class="form-field">
+                    <label for="form-priority">Prioridade <span class="required">*</span></label>
+                    <select id="form-priority" required>
+                        <option value="Alta">🔴 Alta</option>
+                        <option value="Média" selected>🟡 Média</option>
+                        <option value="Baixa">🔵 Baixa</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="form-project-type">Velocidade <span class="required">*</span></label>
+                    <select id="form-project-type" required>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Rápido">Rápido</option>
+                        <option value="Super Rápido">Super Rápido</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row col-2">
+                <div class="form-field">
+                    <label for="form-responsible-name">Nome do Responsável <span class="required">*</span></label>
+                    <input type="text" id="form-responsible-name" placeholder="Ex: Ana Silva" required>
+                </div>
+                <div class="form-field">
+                    <label for="form-responsible-role">Cargo <span class="required">*</span></label>
+                    <input type="text" id="form-responsible-role" placeholder="Ex: Tech Lead" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field full-width">
+                    <label for="form-initial-stage">Etapa Inicial <span class="required">*</span></label>
+                    <input type="text" id="form-initial-stage" value="Planejamento" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field full-width">
+                    <label for="form-sharepoint-link">Link do SharePoint</label>
+                    <input type="url" id="form-sharepoint-link" placeholder="https://sharepoint.com/...">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-modal btn-cancel" id="btn-cancel-modal">Cancelar</button>
+                <button type="submit" class="btn-modal btn-submit">Criar Projeto</button>
+            </div>
+        </form>
+    </div>
+
+</div><!-- /.app-container -->
+
+</body>
+</html>
