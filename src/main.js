@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { inject } from '@vercel/analytics';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
 /* ==========================================================================
    1. ESTADO CENTRAL — fonte única de verdade
@@ -941,4 +942,5 @@ window.App = {
 document.addEventListener('DOMContentLoaded', () => { 
     App.init(); 
     inject();
+    injectSpeedInsights();
 });
